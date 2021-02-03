@@ -21,7 +21,9 @@ public func configure(_ app: Application) throws {
     app.migrations.add(CreateMeasureUnit())
     app.migrations.add(CreateIngredientSection())
     app.migrations.add(CreateMeasuredIngredient())
-
+    app.migrations.add(CreateUser())
+    app.migrations.add(CreatePost())
+    app.migrations.add(CreateComment())
     // register routes
     try routes(app)
 }
