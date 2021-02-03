@@ -4,9 +4,9 @@ struct CreatePost: Migration {
     func prepare(on database: Database) -> EventLoopFuture<Void> {
         return database.schema(Post.schema)
             .id()
-            .field("created_at", .string)
-            .field("updated_at", .string)
-            .field("deleted_at", .string)
+            .field("created_at", .datetime)
+            .field("updated_at", .datetime)
+            .field("deleted_at", .datetime)
             .field("body", .string, .required)
             .field("rating_count", .int, .required)
             .field("rating_sum", .int, .required)
