@@ -16,6 +16,9 @@ final class Post: Model, Content {
     @Timestamp(key: "deleted_at", on: .delete)
     var deletedAt: Date?
     
+    @Field(key: "teaser")
+    var teaser: String
+    
     @Field(key: "body")
     var body: String
     

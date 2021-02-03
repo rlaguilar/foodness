@@ -7,6 +7,7 @@ struct CreatePost: Migration {
             .field("created_at", .datetime)
             .field("updated_at", .datetime)
             .field("deleted_at", .datetime)
+            .field("teaser", .string, .required)
             .field("body", .string, .required)
             .field("rating_count", .int, .required)
             .field("rating_sum", .int, .required)
