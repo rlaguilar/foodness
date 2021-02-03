@@ -3,7 +3,7 @@ import Vapor
 
 func routes(_ app: Application) throws {
     app.get { req in
-        return "Welcome to Foodness API! Start by using any of the endpoints:\n\(app.routes.all.description)"
+        return "Welcome to Foodness API! Start by using any of the endpoints:\n\(app.routes.all.map { $0.description }.joined(separator: "\n"))"
     }
 
     try app.register(collection: IngredientController())
