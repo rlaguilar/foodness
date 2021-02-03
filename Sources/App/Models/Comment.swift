@@ -22,6 +22,9 @@ final class Comment: Model, Content {
     @Field(key: "likes")
     var likes: Int
     
+    @OptionalParent(key: "author_id")
+    var author: User?
+    
     @Parent(key: "post_id")
     var post: Post
     
