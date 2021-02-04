@@ -8,8 +8,15 @@ final class MeasureUnit: Model, Content {
     var id: UUID?
     
     @Field(key: "name")
-    var name: String?
+    var name: String
     
     @Children(for: \.$unit)
     var measuredIngredients: [MeasuredIngredient]
+    
+    init() {}
+    
+    init(id: UUID? = nil, name: String) {
+        self.id = id
+        self.name = name
+    }
 }

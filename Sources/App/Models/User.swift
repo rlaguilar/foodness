@@ -24,4 +24,16 @@ final class User: Model, Content {
     
     @OptionalField(key: "avatar_url")
     var avatarURL: String?
+    
+    init() {}
+    
+    init(id: UUID? = nil, username: String, email: String, passwordHash: String, firstName: String, lastName: String, avatarURL: String?) {
+        self.id = id
+        self.username = username
+        self.email = email
+        self.passwordHash = passwordHash
+        self.firstName = firstName
+        self.lastName = lastName
+        self.avatarURL = avatarURL
+    }
 }

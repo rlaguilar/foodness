@@ -15,4 +15,12 @@ final class IngredientSection: Model, Content {
     
     @Children(for: \.$ingredientSection)
     var measuredIngredients: [MeasuredIngredient]
+    
+    init() {}
+    
+    init(id: UUID? = nil, title: String?, recipeID: UUID) {
+        self.id = id
+        self.title = title
+        self.$recipe.id = recipeID
+    }
 }

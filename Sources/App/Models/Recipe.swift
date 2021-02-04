@@ -27,6 +27,18 @@ final class Recipe: Model, Content {
     
     @Children(for: \.$recipe)
     var ingredientSections: [IngredientSection]
+    
+    init() {}
+    
+    init(id: UUID? = nil, name: String, prepTime: Int, cookTime: Int?, servings: Int, nutritionFacts: Nutrition, instructions: [String]) {
+        self.id = id
+        self.name = name
+        self.prepTime = prepTime
+        self.cookTime = cookTime
+        self.servings = servings
+        self.nutritionFacts = nutritionFacts
+        self.instructions = instructions
+    }
 }
 
 final class Nutrition: Fields {
@@ -59,4 +71,29 @@ final class Nutrition: Fields {
     
     @Field(key: "protein")
     var protein: Float // in grams
+    
+    init() {}
+    
+    init(
+        calories: Float,
+        fat: Float,
+        saturatedFat: Float,
+        cholesterol: Float,
+        sodium: Float,
+        potassium: Float,
+        carbs: Float,
+        sugars: Float,
+        addedSugars: Float,
+        protein: Float) {
+        self.calories = calories
+        self.fat = fat
+        self.saturatedFat = saturatedFat
+        self.cholesterol = cholesterol
+        self.sodium = sodium
+        self.potassium = potassium
+        self.carbs = carbs
+        self.sugars = sugars
+        self.addedSugars = addedSugars
+        self.protein = protein
+    }
 }

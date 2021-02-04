@@ -36,4 +36,16 @@ final class Post: Model, Content {
     
     @Children(for: \.$post)
     var comments: [Comment]
+    
+    init() {}
+    
+    init(id: UUID? = nil, teaser: String, body: String, ratingCount: Int, ratingSum: Int, authorID: UUID?, recipeID: UUID) {
+        self.id = id
+        self.teaser = teaser
+        self.body = body
+        self.ratingCount = ratingCount
+        self.ratingSum = ratingSum
+        self.$author.id = authorID
+        self.$recipe.id = recipeID
+    }
 }
