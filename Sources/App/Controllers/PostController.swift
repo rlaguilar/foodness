@@ -9,6 +9,7 @@ struct PostController: RouteCollection {
         posts.post(use: create)
         
         posts.group(":postID") { post in
+            post.get(use: item)
             post.delete(use: delete)
         }
     }
@@ -16,7 +17,28 @@ struct PostController: RouteCollection {
     func index(req: Request) -> EventLoopFuture<[Post]> {
         return Post.query(on: req.db).all()
     }
-    
+
+    func item(req: Request) throws -> EventLoopFuture<GetPost> {
+        guard let postIDStr = req.parameters.get("postID"),
+              let postID = UUID(uuidString: postIDStr) else {
+            throw Abort(.badRequest)
+        }
+
+        return Post.query(on: req.db)
+            .filter(\.$id == postID)
+            .with(\.$author)
+            .with(\.$recipe, {
+                $0.with(\.$ingredientSections) {
+                    $0.with(\.$measuredIngredients) {
+                        $0.with(\.$ingredient).with(\.$unit)
+                    }
+                }
+            })
+            .first()
+            .unwrap(or: Abort(.notFound))
+            .flatMapThrowing(GetPost.init(post:))
+    }
+
     func create(req: Request) throws -> EventLoopFuture<Post> {
         let post = try req.content.decode(Post.self)
         return post.save(on: req.db).map { post }

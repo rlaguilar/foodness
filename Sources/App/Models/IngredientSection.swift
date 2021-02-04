@@ -1,6 +1,16 @@
 import Fluent
 import Vapor
 
+struct GetIngredientSection: Content {
+    let title: String?
+    let ingredients: [GetMeasuredIngredient]
+    
+    init(section: IngredientSection) throws {
+        title = section.title
+        ingredients = try section.measuredIngredients.map(GetMeasuredIngredient.init(measuredIngredient:))
+    }
+}
+
 final class IngredientSection: Model, Content {
     static var schema: String = "ingredient_sections"
     

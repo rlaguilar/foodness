@@ -1,6 +1,26 @@
 import Fluent
 import Vapor
 
+struct GetUser: Content {
+    let username: String
+    
+    let email: String
+    
+    let firstName: String
+    
+    let lastName: String
+    
+    let avatarURL: String?
+    
+    init(user: User) throws {
+        self.username = user.username
+        self.email = user.email
+        self.firstName = user.firstName
+        self.lastName = user.lastName
+        self.avatarURL = user.avatarURL
+    }
+}
+
 final class User: Model, Content {
     static var schema: String = "users"
     

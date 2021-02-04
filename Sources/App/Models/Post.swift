@@ -1,6 +1,47 @@
 import Fluent
 import Vapor
 
+struct GetPost: Content {
+    let id: UUID
+
+    let createdAt: Date
+    
+    let updatedAt: Date
+    
+    let deletedAt: Date?
+
+    let title: String
+    
+    let teaser: String
+    
+    let body: String
+    
+    let rating: Float
+    
+    let author: GetUser?
+    
+    let recipe: GetRecipe
+    
+    init(post: Post) throws {
+        self.id = try post.requireID()
+        
+        guard let createdAt = post.createdAt,
+              let updatedAt = post.updatedAt else {
+            throw Abort(.internalServerError)
+        }
+        
+        self.updatedAt = updatedAt
+        self.createdAt = createdAt
+        self.deletedAt = post.deletedAt
+        self.title = post.title
+        self.teaser = post.teaser
+        self.body = post.body
+        self.rating = post.ratingCount > 0 ? Float(post.ratingSum) / Float(post.ratingCount) : 0
+        self.author = try post.author.map { try GetUser(user: $0) }
+        self.recipe = try GetRecipe(recipe: post.recipe)
+    }
+}
+
 final class Post: Model, Content {
     static var schema: String = "posts"
     
@@ -15,6 +56,9 @@ final class Post: Model, Content {
     
     @Timestamp(key: "deleted_at", on: .delete)
     var deletedAt: Date?
+    
+    @Field(key: "title")
+    var title: String
     
     @Field(key: "teaser")
     var teaser: String
@@ -39,8 +83,9 @@ final class Post: Model, Content {
     
     init() {}
     
-    init(id: UUID? = nil, teaser: String, body: String, ratingCount: Int, ratingSum: Int, authorID: UUID?, recipeID: UUID) {
+    init(id: UUID? = nil, title: String, teaser: String, body: String, ratingCount: Int, ratingSum: Int, authorID: UUID?, recipeID: UUID) {
         self.id = id
+        self.title = title
         self.teaser = teaser
         self.body = body
         self.ratingCount = ratingCount

@@ -132,6 +132,7 @@ private let cakeIngredients: [MeasuredIngredient] = [
 ]
 
 private let fakePost = Post(
+    title: "Mighty Super Cheesecake",
     teaser: "Look no further for a creamy and ultra smooth classic cheesecake recipe! no one can deny its simple decadence.",
     body: "One thing I learned living in the Canarsie section of Brooklyn, NY was how to cook a good Italian meal. Here is a recipe I created after having this dish in a restaurant. Enjoy!",
     ratingCount: 10,

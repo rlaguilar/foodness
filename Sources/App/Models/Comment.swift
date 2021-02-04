@@ -1,6 +1,37 @@
 import Fluent
 import Vapor
 
+final class GetComment: Content {
+    let id: UUID
+    let createdAt: Date
+    let updatedAt: Date
+    let deletedAt: Date?
+    let message: String
+    let likes: Int
+    let author: GetUser?
+    let targetComment: GetComment?
+    let replies: [GetComment]
+    
+    init(comment: Comment) throws {
+        id = try comment.requireID()
+        
+        guard let createdAt = comment.createdAt,
+              let updatedAt = comment.updatedAt else {
+            throw Abort(.internalServerError)
+        }
+        
+        self.updatedAt = updatedAt
+        self.createdAt = createdAt
+        deletedAt = comment.deletedAt
+        message = comment.message
+        likes = comment.likes
+        author = try comment.author.map { try GetUser(user: $0) }
+        targetComment = try comment.targetComment.map { try GetComment(comment: $0) }
+        replies = try comment.replies.map(GetComment.init(comment:))
+    }
+}
+
+
 final class Comment: Model, Content {
     static var schema: String = "comments"
     

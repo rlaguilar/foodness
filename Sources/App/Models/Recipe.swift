@@ -1,6 +1,28 @@
 import Fluent
 import Vapor
 
+struct GetRecipe: Content {
+    let id: UUID
+    let name: String
+    let prepTime: Int
+    let cookTime: Int?
+    let servings: Int
+    let nutritionFacts: Nutrition
+    let instructions: [String]
+    let ingredientSections: [GetIngredientSection]
+    
+    init(recipe: Recipe) throws {
+        self.id = try recipe.requireID()
+        self.name = recipe.name
+        self.prepTime = recipe.prepTime
+        self.cookTime = recipe.cookTime
+        self.servings = recipe.servings
+        self.nutritionFacts = recipe.nutritionFacts
+        self.instructions = recipe.instructions
+        self.ingredientSections = try recipe.ingredientSections.map(GetIngredientSection.init(section:))
+    }
+}
+
 final class Recipe: Model, Content {
     static var schema: String = "recipies"
     

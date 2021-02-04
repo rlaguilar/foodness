@@ -1,6 +1,20 @@
 import Fluent
 import Vapor
 
+struct GetMeasuredIngredient: Content {
+    let amount: Float
+    let details: String?
+    let unit: String
+    let name: String
+    
+    init(measuredIngredient: MeasuredIngredient) throws {
+        amount = measuredIngredient.amount
+        details = measuredIngredient.details
+        unit = measuredIngredient.unit.name
+        name = measuredIngredient.ingredient.name
+    }
+}
+
 final class MeasuredIngredient: Model, Content {
     static var schema: String = "measured_ingredients"
     
