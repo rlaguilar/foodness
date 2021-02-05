@@ -21,7 +21,15 @@ struct GetUser: Content {
     }
 }
 
-final class User: Model, Content {
+struct PutUser: Content {
+    let username: String
+    let email: String
+    let firstName: String
+    let lastName: String
+    let password: String
+}
+
+final class User: Model, Content, Authenticatable {
     static var schema: String = "users"
     
     @ID(key: .id)

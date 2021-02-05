@@ -6,7 +6,7 @@ struct UserController: RouteCollection {
         let users = routes.grouped("users")
         
         users.get(use: index)
-        users.post(use: create)
+//        users.post(use: create)
         
         users.group(":username") { user in
             user.delete(use: delete)
@@ -17,9 +17,21 @@ struct UserController: RouteCollection {
         return User.query(on: req.db).all()
     }
     
-    func create(req: Request) throws -> EventLoopFuture<User> {
-        let user = try req.content.decode(User.self)
-        return user.save(on: req.db).map { user }
+    func create(req: Request) throws -> EventLoopFuture<GetUser> {
+        let newUserRequest = try req.content.decode(PutUser.self)
+        
+        return req.password.async.hash(newUserRequest.password).flatMap { hashedPassword in
+            let user = User(
+                username: newUserRequest.username,
+                email: newUserRequest.email,
+                passwordHash: hashedPassword,
+                firstName: newUserRequest.firstName,
+                lastName: newUserRequest.lastName,
+                avatarURL: nil
+            )
+            
+            return user.save(on: req.db).flatMapThrowing { try GetUser(user: user) }
+        }
     }
     
     func delete(req: Request) throws -> EventLoopFuture<HTTPStatus> {
