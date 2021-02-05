@@ -1,24 +1,34 @@
 import Fluent
 import Vapor
 
+struct PutLogin: Content {
+    let refreshToken: Bool?
+}
+
 struct AuthController: RouteCollection {
     func boot(routes: RoutesBuilder) throws {
         let auth = routes
             .grouped("auth")
-//            .grouped(UserBasicAuthenticator())
-//            .grouped(User.guardMiddleware())
-        
-        
+
         auth.post("signup", use: signup)
-//        auth.post("me", use: me)
         
-//
-//        comments.get(use: index)
-//        comments.post(use: create)
-//
-//        comments.group(":commentID") { comment in
-//            comment.delete(use: delete)
-//        }
+        let authenticated = auth
+            .grouped(UserBasicAuthenticator())
+            .grouped(UserBearerAuthenticator())
+            .grouped(AuthUser.guardMiddleware())
+        
+        authenticated.post("login", use: login)
+        authenticated.post("logout", use: logout)
+    }
+    
+    func login(req: Request) throws -> EventLoopFuture<GetUserToken> {
+        let authUser = try req.auth.require(AuthUser.self)
+        
+        let loginParams = req.content.contentType != nil ? try req.content.decode(PutLogin.self) : nil
+        
+        let tokenScope = UserToken.Scope(refreshToken: loginParams?.refreshToken == true, accessResources: loginParams?.refreshToken != true)
+        let newToken = authUser.user.newToken(withScope: tokenScope)
+        return newToken.save(on: req.db).map { GetUserToken(token: newToken) }
     }
     
     func signup(req: Request) throws -> EventLoopFuture<GetUser> {
@@ -34,15 +44,29 @@ struct AuthController: RouteCollection {
                 avatarURL: nil
             )
             
-            return user.save(on: req.db).flatMapThrowing { try GetUser(user: user) }
+            return user.save(on: req.db).map { GetUser(user: user) }
         }
     }
     
-    // TODO: Get this out of here
-    func me(req: Request) throws -> GetUser {
-        let user = try req.auth.require(User.self)
-        return try GetUser(user: user)
+    func logout(req: Request) throws -> EventLoopFuture<HTTPStatus> {
+        let authUser = try req.auth.require(AuthUser.self)
+        
+        guard let token = authUser.token else {
+            throw Abort(.badRequest)
+        }
+        
+        guard token.sourceToken == nil else {
+            throw Abort(.badRequest)
+        }
+        
+        return token.delete(on: req.db).transform(to: .ok)
     }
+    
+    // TODO: Get this out of here
+//    func me(req: Request) throws -> GetUser {
+//        let user = try req.auth.require(User.self)
+//        return try GetUser(user: user)
+//    }
     
 //    func index(req: Request) -> EventLoopFuture<[Comment]> {
 //        return Comment.query(on: req.db).all()
@@ -62,18 +86,31 @@ struct AuthController: RouteCollection {
 }
 
 struct UserBasicAuthenticator: BasicAuthenticator {
-    typealias User = App.User
-    
     func authenticate(basic: BasicAuthorization, for request: Request) -> EventLoopFuture<Void> {
         let user = User.query(on: request.db)
             .filter(\.$email == basic.username)
             .first()
-            .unwrap(or: Abort(.unauthorized))
+            .unwrap(or: Abort(.notFound))
         
         return user.flatMapThrowing { user in
             if try Bcrypt.verify(basic.password, created: user.passwordHash) {
-                request.auth.login(user)
+                request.auth.login(AuthUser(user: user, token: nil))
             }
+        }
+    }
+}
+
+struct UserBearerAuthenticator: BearerAuthenticator {
+    func authenticate(bearer: BearerAuthorization, for request: Request) -> EventLoopFuture<Void> {
+        let token = UserToken.query(on: request.db)
+            .filter(\.$value == bearer.token)
+            .filter(\.$expireDate > Date())
+            .with(\.$user)
+            .first()
+            .unwrap(or: Abort(.notFound))
+        
+        return token.map { loadedToken in
+            request.auth.login(AuthUser(user: loadedToken.user, token: loadedToken))
         }
     }
 }

@@ -12,7 +12,7 @@ struct GetUser: Content {
     
     let avatarURL: String?
     
-    init(user: User) throws {
+    init(user: User) {
         self.username = user.username
         self.email = user.email
         self.firstName = user.firstName
@@ -29,7 +29,12 @@ struct PutUser: Content {
     let password: String
 }
 
-final class User: Model, Content, Authenticatable {
+struct AuthUser: Content, Authenticatable {
+    let user: User
+    let token: UserToken?
+}
+
+final class User: Model, Content {
     static var schema: String = "users"
     
     @ID(key: .id)
@@ -53,6 +58,9 @@ final class User: Model, Content, Authenticatable {
     @OptionalField(key: "avatar_url")
     var avatarURL: String?
     
+    @Children(for: \.$user)
+    var tokens: [UserToken]
+    
     init() {}
     
     init(id: UUID? = nil, username: String, email: String, passwordHash: String, firstName: String, lastName: String, avatarURL: String?) {
@@ -63,5 +71,14 @@ final class User: Model, Content, Authenticatable {
         self.firstName = firstName
         self.lastName = lastName
         self.avatarURL = avatarURL
+    }
+    
+    func newToken(withScope scope: UserToken.Scope) -> UserToken {
+        return UserToken(
+            value: [UInt8].random(count: 16).base64,
+            expireDate: scope.preferredExpirationDate(),
+            scope: scope,
+            userID: id!
+        )
     }
 }

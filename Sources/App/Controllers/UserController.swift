@@ -6,7 +6,10 @@ struct UserController: RouteCollection {
         let users = routes.grouped("users")
         
         users.get(use: index)
-//        users.post(use: create)
+        
+        users.grouped(UserBearerAuthenticator())
+            .grouped(AuthUser.guardMiddleware())
+            .get("me", use: me)
         
         users.group(":username") { user in
             user.delete(use: delete)
@@ -17,21 +20,9 @@ struct UserController: RouteCollection {
         return User.query(on: req.db).all()
     }
     
-    func create(req: Request) throws -> EventLoopFuture<GetUser> {
-        let newUserRequest = try req.content.decode(PutUser.self)
-        
-        return req.password.async.hash(newUserRequest.password).flatMap { hashedPassword in
-            let user = User(
-                username: newUserRequest.username,
-                email: newUserRequest.email,
-                passwordHash: hashedPassword,
-                firstName: newUserRequest.firstName,
-                lastName: newUserRequest.lastName,
-                avatarURL: nil
-            )
-            
-            return user.save(on: req.db).flatMapThrowing { try GetUser(user: user) }
-        }
+    func me(req: Request) throws -> GetUser {
+        let authUser = try req.auth.require(AuthUser.self)
+        return GetUser(user: authUser.user)
     }
     
     func delete(req: Request) throws -> EventLoopFuture<HTTPStatus> {

@@ -25,7 +25,7 @@ final class GetComment: Content {
         deletedAt = comment.deletedAt
         message = comment.message
         likes = comment.likes
-        author = try comment.author.map { try GetUser(user: $0) }
+        author = comment.author.map { GetUser(user: $0) }
         targetComment = try comment.targetComment.map { try GetComment(comment: $0) }
         replies = try comment.replies.map(GetComment.init(comment:))
     }

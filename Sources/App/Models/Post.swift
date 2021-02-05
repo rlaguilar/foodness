@@ -37,7 +37,7 @@ struct GetPost: Content {
         self.teaser = post.teaser
         self.body = post.body
         self.rating = post.ratingCount > 0 ? Float(post.ratingSum) / Float(post.ratingCount) : 0
-        self.author = try post.author.map { try GetUser(user: $0) }
+        self.author = post.author.map(GetUser.init(user:))
         self.recipe = try GetRecipe(recipe: post.recipe)
     }
 }
