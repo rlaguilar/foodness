@@ -2,7 +2,7 @@ import Fluent
 import Vapor
 
 struct PutLogin: Content {
-    let refreshToken: Bool?
+    let accessResources: Bool?
 }
 
 struct AuthController: RouteCollection {
@@ -14,7 +14,7 @@ struct AuthController: RouteCollection {
         
         let authenticated = auth
             .grouped(UserBasicAuthenticator())
-            .grouped(UserBearerAuthenticator())
+            .grouped(UserBearerAuthenticator(requiresResourcesAccessScope: false, requiresRefreshTokenScope: true))
             .grouped(AuthUser.guardMiddleware())
         
         authenticated.post("login", use: login)
@@ -26,7 +26,7 @@ struct AuthController: RouteCollection {
         
         let loginParams = req.content.contentType != nil ? try req.content.decode(PutLogin.self) : nil
         
-        let tokenScope = UserToken.Scope(refreshToken: loginParams?.refreshToken == true, accessResources: loginParams?.refreshToken != true)
+        let tokenScope = UserToken.Scope(refreshToken: true, accessResources: loginParams?.accessResources == true)
         let newToken = authUser.user.newToken(withScope: tokenScope)
         return newToken.save(on: req.db).map { GetUserToken(token: newToken) }
     }
@@ -101,6 +101,9 @@ struct UserBasicAuthenticator: BasicAuthenticator {
 }
 
 struct UserBearerAuthenticator: BearerAuthenticator {
+    let requiresResourcesAccessScope: Bool
+    let requiresRefreshTokenScope: Bool
+    
     func authenticate(bearer: BearerAuthorization, for request: Request) -> EventLoopFuture<Void> {
         let token = UserToken.query(on: request.db)
             .filter(\.$value == bearer.token)
@@ -110,6 +113,14 @@ struct UserBearerAuthenticator: BearerAuthenticator {
             .unwrap(or: Abort(.notFound))
         
         return token.map { loadedToken in
+            guard !requiresResourcesAccessScope || loadedToken.scope.accessResources else {
+                return
+            }
+            
+            guard !requiresRefreshTokenScope || loadedToken.scope.refreshToken else {
+                return
+            }
+            
             request.auth.login(AuthUser(user: loadedToken.user, token: loadedToken))
         }
     }
