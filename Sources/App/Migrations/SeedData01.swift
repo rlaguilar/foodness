@@ -44,6 +44,7 @@ struct SeedData01: Migration {
         )
         .flatMap {
             EventLoopFuture.andAllComplete([
+                fakeRecipe.delete(on: database),
                 grahamCrackersIngredient.delete(on: database),
                 unsaltedButterIngredient.delete(on: database),
                 marshmallowsIngredient.delete(on: database),
@@ -132,6 +133,7 @@ private let cakeIngredients: [MeasuredIngredient] = [
 ]
 
 private let fakePost = Post(
+    id: UUID(),
     title: "Mighty Super Cheesecake",
     teaser: "Look no further for a creamy and ultra smooth classic cheesecake recipe! no one can deny its simple decadence.",
     body: "One thing I learned living in the Canarsie section of Brooklyn, NY was how to cook a good Italian meal. Here is a recipe I created after having this dish in a restaurant. Enjoy!",
