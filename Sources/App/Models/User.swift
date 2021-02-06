@@ -73,13 +73,26 @@ final class User: Model, Content {
         self.avatarURL = avatarURL
     }
     
-    func newToken(withScope scope: UserToken.Scope, sourceTokenID: UUID?) -> UserToken {
+    func newToken(withScope scope: UserToken.Scope, location: UserToken.Location, sourceTokenID: UUID?) -> UserToken {
         return UserToken(
-            value: [UInt8].random(count: 16).base64,
+            value: RandomURLPathValidCharacterGenerator.shared.next(length: 24),
             expireDate: scope.preferredExpirationDate(),
             scope: scope,
+            location: location,
             userID: id!,
             sourceTokenID: sourceTokenID
         )
+    }
+}
+
+private class RandomURLPathValidCharacterGenerator {
+    static let shared = RandomURLPathValidCharacterGenerator()
+    private let allowedChars = Array("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_")
+    
+    func next(length: Int) -> String {
+        let characters = (0 ..< length)
+            .map { _ in allowedChars[Int.random(in: 0 ..< allowedChars.count)] }
+    
+        return String(characters)
     }
 }

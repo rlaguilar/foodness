@@ -7,7 +7,7 @@ struct UserController: RouteCollection {
         
         users.get(use: index)
         
-        users.grouped(UserBearerAuthenticator(requiresResourcesAccessScope: true, requiresRefreshTokenScope: false))
+        users.grouped(UserBearerAuthenticator(requiresResourcesAccessScope: true))
             .grouped(AuthUser.guardMiddleware())
             .get("me", use: me)
         

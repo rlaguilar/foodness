@@ -5,11 +5,13 @@ struct GetUserToken: Content {
     let value: String
     let expireDate: Date
     let scope: UserToken.Scope
+    let location: UserToken.Location
     
     init(token: UserToken) {
         self.value = token.value
         self.expireDate = token.expireDate
         self.scope = token.scope
+        self.location = token.location
     }
 }
 
@@ -25,6 +27,9 @@ final class UserToken: Model, Content, Authenticatable {
     @Field(key: "expire_date")
     var expireDate: Date
     
+    @Group(key: "location")
+    var location: Location
+    
     @Group(key: "scope")
     var scope: Scope
     
@@ -36,13 +41,62 @@ final class UserToken: Model, Content, Authenticatable {
     
     init() {}
     
-    init(id: UUID? = nil, value: String, expireDate: Date, scope: Scope, userID: UUID, sourceTokenID: UUID? = nil) {
+    init(id: UUID? = nil, value: String, expireDate: Date, scope: Scope, location: Location, userID: UUID, sourceTokenID: UUID? = nil) {
         self.id = id
         self.value = value
         self.expireDate = expireDate
         self.scope = scope
+        self.location = location
         self.$user.id = userID
         self.$sourceToken.id = sourceTokenID
+    }
+    
+    final class Location: Fields {
+        @OptionalField(key: "ip")
+        var ip: String?
+        
+        @OptionalField(key: "country_name")
+        var countryName: String?
+        
+        @OptionalField(key: "country_code")
+        var countryCode: String?
+
+        @OptionalField(key: "region_name")
+        var regionName: String?
+        
+        @OptionalField(key: "region_code")
+        var regionCode: String?
+        
+        @OptionalField(key: "city")
+        var city: String?
+        
+        @OptionalField(key: "latitude")
+        var latitude: Double?
+        
+        @OptionalField(key: "longitude")
+        var longitude: Double?
+        
+        init() {}
+        
+        init(
+            ip: String?,
+            countryName: String?,
+            countryCode: String?,
+            regionName: String?,
+            regionCode: String?,
+            city: String?,
+            latitude: Double?,
+            longitude: Double?
+        ) {
+            self.ip = ip
+            self.countryName = countryName
+            self.countryCode = countryCode
+            self.regionName = regionName
+            self.regionCode = regionCode
+            self.city = city
+            self.latitude = latitude
+            self.longitude = longitude
+        }
     }
     
     final class Scope: Fields {
@@ -52,15 +106,22 @@ final class UserToken: Model, Content, Authenticatable {
         @Field(key: "access_resources")
         var accessResources: Bool
         
+        @Field(key: "sudo_access")
+        var sudoAccess: Bool
+        
         init() {}
         
-        init(refreshToken: Bool, accessResources: Bool) {
+        init(refreshToken: Bool, accessResources: Bool, sudoAccess: Bool) {
             self.refreshToken = refreshToken
             self.accessResources = accessResources
+            self.sudoAccess = sudoAccess
         }
         
         func preferredExpirationDate() -> Date {
-            if accessResources {
+            if sudoAccess {
+                return Date().addingTimeInterval(1 * 60 * 60) // 1 hour
+            }
+            else if accessResources {
                 return Date().addingTimeInterval(7 * 24 * 60 * 60) // 1 week
             }
             else if refreshToken {
