@@ -3,12 +3,16 @@ import Vapor
 
 struct GetUserToken: Content {
     let value: String
+    let createdAt: Date?
+    let lastAccessDate: Date?
     let expireDate: Date
     let scope: UserToken.Scope
     let location: UserToken.Location
     
     init(token: UserToken) {
         self.value = token.value
+        self.createdAt = token.createdAt
+        self.lastAccessDate = token.lastAccessDate
         self.expireDate = token.expireDate
         self.scope = token.scope
         self.location = token.location
@@ -23,6 +27,12 @@ final class UserToken: Model, Content, Authenticatable {
     
     @Field(key: "value")
     var value: String
+    
+    @Timestamp(key: "created_at", on: .create)
+    var createdAt: Date?
+    
+    @OptionalField(key: "last_access_date")
+    var lastAccessDate: Date?
     
     @Field(key: "expire_date")
     var expireDate: Date
@@ -41,9 +51,10 @@ final class UserToken: Model, Content, Authenticatable {
     
     init() {}
     
-    init(id: UUID? = nil, value: String, expireDate: Date, scope: Scope, location: Location, userID: UUID, sourceTokenID: UUID? = nil) {
+    init(id: UUID? = nil, value: String, lastAccessDate: Date?, expireDate: Date, scope: Scope, location: Location, userID: UUID, sourceTokenID: UUID? = nil) {
         self.id = id
         self.value = value
+        self.lastAccessDate = lastAccessDate
         self.expireDate = expireDate
         self.scope = scope
         self.location = location

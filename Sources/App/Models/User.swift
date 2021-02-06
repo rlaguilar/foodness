@@ -76,6 +76,7 @@ final class User: Model, Content {
     func newToken(withScope scope: UserToken.Scope, location: UserToken.Location, sourceTokenID: UUID?) -> UserToken {
         return UserToken(
             value: RandomURLPathValidCharacterGenerator.shared.next(length: 24),
+            lastAccessDate: Date(),
             expireDate: scope.preferredExpirationDate(),
             scope: scope,
             location: location,

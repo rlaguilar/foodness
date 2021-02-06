@@ -47,6 +47,7 @@ struct AuthController: RouteCollection {
         let authUser = try req.auth.require(AuthUser.self)
         return UserToken.query(on: req.db)
             .filter(\.$user.$id == authUser.user.id! )
+            .filter(\.$expireDate > Date())
             .all()
             .mapEach(GetUserToken.init(token:))
     }
@@ -113,16 +114,22 @@ struct AuthController: RouteCollection {
             return UserToken.Scope(
                 refreshToken: refreshToken,
                 accessResources: true,
-                // we can only get sudo access tokens via the login endpoint by entering username and password
+                // we can only get sudo-access tokens via the login endpoint by entering username and password
                 sudoAccess: false
             )
         }
+        
+        token.lastAccessDate = Date()
         
         return location(req: req)
             .recover { _ in UserToken.Location() }
             .map { authUser.user.newToken(withScope: scope(from: token.scope), location: $0, sourceTokenID: token.id) }
             .flatMap { newToken in
-                newToken.save(on: req.db).map { GetUserToken(token: newToken) }
+                EventLoopFuture.andAllSucceed(
+                    [newToken.save(on: req.db), token.save(on: req.db)],
+                    on: req.eventLoop
+                )
+                .map { GetUserToken(token: newToken) }
             }
     }
     
