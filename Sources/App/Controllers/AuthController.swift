@@ -18,6 +18,7 @@ struct AuthController: RouteCollection {
             .grouped(AuthUser.guardMiddleware())
         
         authenticated.post("login", use: login)
+        authenticated.post("refresh", use: refresh)
         authenticated.post("logout", use: logout)
     }
     
@@ -27,7 +28,7 @@ struct AuthController: RouteCollection {
         let loginParams = req.content.contentType != nil ? try req.content.decode(PutLogin.self) : nil
         
         let tokenScope = UserToken.Scope(refreshToken: true, accessResources: loginParams?.accessResources == true)
-        let newToken = authUser.user.newToken(withScope: tokenScope)
+        let newToken = authUser.user.newToken(withScope: tokenScope, sourceTokenID: nil)
         return newToken.save(on: req.db).map { GetUserToken(token: newToken) }
     }
     
@@ -48,14 +49,26 @@ struct AuthController: RouteCollection {
         }
     }
     
-    func logout(req: Request) throws -> EventLoopFuture<HTTPStatus> {
+    func refresh(req: Request) throws -> EventLoopFuture<GetUserToken> {
         let authUser = try req.auth.require(AuthUser.self)
         
         guard let token = authUser.token else {
             throw Abort(.badRequest)
         }
         
-        guard token.sourceToken == nil else {
+        func scope(from scope: UserToken.Scope) -> UserToken.Scope {
+            let refreshToken = scope.accessResources ? scope.refreshToken : false
+            return UserToken.Scope(refreshToken: refreshToken, accessResources: true)
+        }
+        
+        let newToken = authUser.user.newToken(withScope: scope(from: token.scope), sourceTokenID: token.id)
+        return newToken.save(on: req.db).map { GetUserToken(token: newToken) }
+    }
+    
+    func logout(req: Request) throws -> EventLoopFuture<HTTPStatus> {
+        let authUser = try req.auth.require(AuthUser.self)
+        
+        guard let token = authUser.token else {
             throw Abort(.badRequest)
         }
         

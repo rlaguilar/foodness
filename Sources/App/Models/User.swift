@@ -73,12 +73,13 @@ final class User: Model, Content {
         self.avatarURL = avatarURL
     }
     
-    func newToken(withScope scope: UserToken.Scope) -> UserToken {
+    func newToken(withScope scope: UserToken.Scope, sourceTokenID: UUID?) -> UserToken {
         return UserToken(
             value: [UInt8].random(count: 16).base64,
             expireDate: scope.preferredExpirationDate(),
             scope: scope,
-            userID: id!
+            userID: id!,
+            sourceTokenID: sourceTokenID
         )
     }
 }
