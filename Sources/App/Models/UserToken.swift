@@ -87,9 +87,9 @@ final class UserToken: Model, Content, Authenticatable {
         @OptionalField(key: "longitude")
         var longitude: Double?
         
-        private enum CodingKeys : String, CodingKey {
-            case ip, countryName = "country_name", countryCode = "country_code", regionName = "region_name", regionCode = "region_code", city, latitude, longitude
-        }
+//        private enum CodingKeys : String, CodingKey {
+//            case ip, countryName = "country_name", countryCode = "country_code", regionName = "region_name", regionCode = "region_code", city, latitude
+//        }
         
         init() {}
         

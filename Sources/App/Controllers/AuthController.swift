@@ -202,7 +202,9 @@ struct AuthController: RouteCollection {
         }
         
         let ipstackURL: URI = "http://api.ipstack.com/\(ipAddress)?access_key=5291d83e523087ebb798020630838ea6"
-        return req.client.get(ipstackURL).flatMapThrowing { try $0.content.decode(UserToken.Location.self) }
+        let jsonDecoder = JSONDecoder()
+        jsonDecoder.keyDecodingStrategy = .convertFromSnakeCase
+        return req.client.get(ipstackURL).flatMapThrowing { try $0.content.decode(UserToken.Location.self, using: jsonDecoder) }
     }
 }
 
