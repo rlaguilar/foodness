@@ -5,12 +5,24 @@ struct PutLogin: Content {
     let accessResources: Bool?
 }
 
+struct PutForgotPassword: Content {
+    let email: String
+}
+
+struct PutResetPassword: Content {
+    let email: String
+    let password: String
+}
+
 struct AuthController: RouteCollection {
     func boot(routes: RoutesBuilder) throws {
         let auth = routes
             .grouped("auth")
 
+        auth.get("tokens", use: _____temporalTokens)
         auth.post("signup", use: signup)
+        auth.post("forgot", use: forgot)
+        auth.post("reset", ":resetID", use: reset)
         
         let authenticated = auth
             .grouped(UserBasicAuthenticator())
@@ -20,6 +32,16 @@ struct AuthController: RouteCollection {
         authenticated.post("login", use: login)
         authenticated.post("refresh", use: refresh)
         authenticated.post("logout", use: logout)
+    }
+    
+    func _____temporalTokens(req: Request) throws -> EventLoopFuture<[UserToken]> {
+        let email: String = try req.query.get(at: "userEmail")
+        return User.query(on: req.db)
+            .filter(\.$email == email)
+            .with(\.$tokens)
+            .first()
+            .unwrap(or: Abort(.notFound))
+            .map { $0.tokens }
     }
     
     func login(req: Request) throws -> EventLoopFuture<GetUserToken> {
@@ -75,27 +97,58 @@ struct AuthController: RouteCollection {
         return token.delete(on: req.db).transform(to: .ok)
     }
     
-    // TODO: Get this out of here
-//    func me(req: Request) throws -> GetUser {
-//        let user = try req.auth.require(User.self)
-//        return try GetUser(user: user)
-//    }
-    
-//    func index(req: Request) -> EventLoopFuture<[Comment]> {
-//        return Comment.query(on: req.db).all()
-//    }
-//
-//    func create(req: Request) throws -> EventLoopFuture<Comment> {
-//        let comment = try req.content.decode(Comment.self)
-//        return comment.save(on: req.db).map { comment }
-//    }
-//
-//    func delete(req: Request) throws -> EventLoopFuture<HTTPStatus> {
-//        return Comment.find(req.parameters.get("commentID"), on: req.db)
-//            .unwrap(or: Abort(.notFound))
-//            .flatMap { $0.delete(on: req.db) }
-//            .transform(to: .ok)
-//    }
+    func forgot(req: Request) throws -> EventLoopFuture<TemporaryBecauseWeDoNotSendEmailPasswordReset> {
+        let forgotPassword = try req.content.decode(PutForgotPassword.self)
+        
+        let errorWhenUserDoesNotExist = Abort.init(.notFound, identifier: "forgot password for not existing user")
+        let userQuery = User.query(on: req.db).filter(\.$email == forgotPassword.email).first().unwrap(or: errorWhenUserDoesNotExist)
+        
+        return userQuery.flatMap { user in
+            let passwordReset = PasswordReset(
+                email: forgotPassword.email,
+                expireDate: Date().addingTimeInterval(30 * 60), // 30 mins
+                userID: user.id!
+            )
+            
+            return passwordReset.save(on: req.db).map { TemporaryBecauseWeDoNotSendEmailPasswordReset(reset: passwordReset) }
+        }
+        .flatMapErrorThrowing { error -> TemporaryBecauseWeDoNotSendEmailPasswordReset in
+            guard let abort = error as? Abort, abort.identifier == errorWhenUserDoesNotExist.identifier else {
+                throw error
+            }
+            
+            return .invalid
+        }
+    }
+
+    func reset(req: Request) throws -> EventLoopFuture<HTTPStatus> {
+        guard let resetIDStr = req.parameters.get("resetID"),
+              let resetID = UUID(uuidString: resetIDStr) else {
+            throw Abort(.badRequest)
+        }
+
+        let resetPasswordData = try req.content.decode(PutResetPassword.self)
+        
+        return PasswordReset.query(on: req.db)
+            .filter(\.$id == resetID)
+            .with(\.$user) {
+                $0.with(\.$tokens)
+            }
+            .first()
+            .unwrap(or: Abort(.notFound))
+            .guard({ $0.user.email == resetPasswordData.email }, else: Abort(.badRequest))
+            .guard({ $0.expireDate > Date() }, else: Abort(.gone, reason: "The reset password expiration date is due. Please try reseting your password again."))
+            .flatMap { reset -> EventLoopFuture<Void> in
+                return req.password.async.hash(resetPasswordData.password).flatMap { hashedPassword in
+                    let user = reset.user
+                    user.passwordHash = hashedPassword
+                    return user.save(on: req.db).flatMap {
+                        EventLoopFuture.andAllComplete(user.tokens.map { $0.delete(on: req.db) }, on: req.db.context.eventLoop)
+                    }
+                }
+            }
+            .transform(to: .ok)
+    }
 }
 
 struct UserBasicAuthenticator: BasicAuthenticator {
